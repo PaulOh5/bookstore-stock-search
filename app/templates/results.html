@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}{{ q }} - 검색 결과{% endblock %}
+{% block content %}
+<form action="/search" method="get" class="mb-6">
+    <div class="flex gap-2">
+        <input
+            type="text"
+            name="q"
+            value="{{ q }}"
+            placeholder="책 제목, 저자, ISBN으로 검색"
+            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+        >
+        <button
+            type="submit"
+            class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+        >검색</button>
+    </div>
+</form>
+
+{% if error %}
+<div class="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+    <p class="text-red-700 text-sm">{{ error }}</p>
+</div>
+{% elif not books %}
+<p class="text-center text-gray-500 mt-12">검색 결과가 없습니다.</p>
+{% else %}
+<div class="space-y-4">
+    {% for book in books %}
+    <div class="bg-white rounded-lg shadow-sm border p-4">
+        <div class="flex gap-4">
+            {% if book.thumbnail %}
+            <img src="{{ book.thumbnail }}" alt="{{ book.title }}" class="w-20 h-28 object-cover rounded flex-shrink-0">
+            {% endif %}
+            <div class="flex-1 min-w-0">
+                <h2 class="font-bold text-gray-900 truncate">{{ book.title }}</h2>
+                <p class="text-sm text-gray-600">{{ book.authors | join(', ') }}</p>
+                <p class="text-sm text-gray-500">{{ book.publisher }} · {{ book.pub_date }}</p>
+                <p class="text-sm mt-1">
+                    {% if book.sale_price > 0 %}
+                    <span class="text-blue-600 font-medium">{{ "{:,}".format(book.sale_price) }}원</span>
+                    <span class="text-gray-400 line-through text-xs ml-1">{{ "{:,}".format(book.price) }}원</span>
+                    {% else %}
+                    <span class="text-blue-600 font-medium">{{ "{:,}".format(book.price) }}원</span>
+                    {% endif %}
+                </p>
+                <button
+                    onclick="loadInventory(this, '{{ book.isbn13 }}')"
+                    class="mt-2 px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                >오프라인 재고 확인</button>
+                <div class="inventory-result mt-2 hidden"></div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadInventory(btn, isbn13) {
+    const container = btn.nextElementSibling;
+    btn.disabled = true;
+    btn.textContent = '조회 중...';
+    btn.classList.add('opacity-50');
+    container.classList.remove('hidden');
+    container.innerHTML = '<p class="text-sm text-gray-500">서점 재고를 확인하고 있습니다...</p>';
+
+    try {
+        const resp = await fetch(`/api/inventory/${isbn13}`);
+        const data = await resp.json();
+        container.innerHTML = renderInventory(data);
+    } catch (e) {
+        container.innerHTML = '<p class="text-sm text-red-500">재고 조회에 실패했습니다.</p>';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '오프라인 재고 확인';
+        btn.classList.remove('opacity-50');
+    }
+}
+
+function renderInventory(data) {
+    if (!data.results || data.results.length === 0) {
+        return '<p class="text-sm text-gray-500">조회 결과가 없습니다.</p>';
+    }
+
+    let html = `<p class="text-sm font-medium text-gray-700 mb-2">총 ${data.total_stores_with_stock}개 매장 보유</p>`;
+
+    for (const result of data.results) {
+        const statusBadge = result.status === 'success'
+            ? `<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">${result.stores.length}개 매장</span>`
+            : result.status === 'timeout'
+            ? '<span class="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">타임아웃</span>'
+            : '<span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">미구현</span>';
+
+        html += `<details class="mb-1">`;
+        html += `<summary class="text-sm cursor-pointer hover:text-blue-600 flex items-center gap-2">`;
+        html += `<span class="font-medium">${result.display_name}</span> ${statusBadge}`;
+        html += `</summary>`;
+
+        if (result.status === 'success' && result.stores.length > 0) {
+            html += '<ul class="ml-4 mt-1 space-y-0.5">';
+            for (const store of result.stores) {
+                html += `<li class="text-sm text-gray-600">`;
+                html += `<span class="inline-block w-2 h-2 rounded-full ${store.has_stock ? 'bg-green-500' : 'bg-red-400'} mr-1"></span>`;
+                html += store.store_name;
+                if (store.quantity) html += ` (${store.quantity}권)`;
+                if (store.location) html += ` <span class="text-xs text-gray-400">${store.location}</span>`;
+                html += '</li>';
+            }
+            html += '</ul>';
+        } else if (result.error_message) {
+            html += `<p class="ml-4 text-xs text-gray-400 mt-1">${result.error_message}</p>`;
+        }
+
+        html += '</details>';
+    }
+
+    return html;
+}
+</script>
+{% endblock %}
