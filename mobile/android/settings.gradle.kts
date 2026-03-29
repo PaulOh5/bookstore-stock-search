@@ -6,12 +6,5 @@ pluginManagement {
     }
 }
 
-dependencyResolution {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-
 rootProject.name = "OffBookSearch"
 include(":app")
