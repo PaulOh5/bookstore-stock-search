@@ -1,56 +1,101 @@
 {% extends "base.html" %}
 {% block title %}{{ q }} - 검색 결과{% endblock %}
 {% block content %}
-<form action="/search" method="get" class="mb-6">
-    <div class="flex gap-2">
-        <input
-            type="text"
-            name="q"
-            value="{{ q }}"
-            placeholder="책 제목, 저자, ISBN으로 검색"
-            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-        >
-        <button
-            type="submit"
-            class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-        >검색</button>
-    </div>
-</form>
+<!-- Sticky search bar -->
+<div class="sticky top-[52px] z-40 bg-surface/95 backdrop-blur-sm py-3 -mx-4 px-4">
+    <form action="/search" method="get">
+        <div class="relative flex gap-2">
+            <div class="relative flex-1">
+                <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ q }}"
+                    placeholder="책 제목, 저자, ISBN으로 검색"
+                    class="w-full pl-10 pr-4 py-2.5 bg-white border-0 rounded-2xl shadow-sm text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/40"
+                    required
+                >
+            </div>
+            <button
+                type="submit"
+                class="px-5 py-2.5 bg-accent text-white rounded-2xl font-medium text-sm hover:bg-accent-hover btn-press"
+            >검색</button>
+        </div>
+    </form>
+</div>
 
 {% if error %}
-<div class="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+<div class="bg-danger-light border border-red-200 rounded-xl p-4 mt-3 flex items-start gap-3">
+    <svg class="w-5 h-5 text-danger flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="15" y1="9" x2="9" y2="15"/>
+        <line x1="9" y1="9" x2="15" y2="15"/>
+    </svg>
     <p class="text-red-700 text-sm">{{ error }}</p>
 </div>
 {% elif not books %}
-<p class="text-center text-gray-500 mt-12">검색 결과가 없습니다.</p>
+<!-- Empty state -->
+<div class="flex flex-col items-center justify-center mt-16 animate-fade-in">
+    <svg class="w-16 h-16 text-gray-300 mb-4" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="12" y="8" width="28" height="38" rx="3" fill="#F3F4F6"/>
+        <path d="M20 18h12M20 24h8M20 30h10"/>
+        <circle cx="44" cy="44" r="12" fill="#F9FAFB" stroke-width="2"/>
+        <path d="M40 44h8M44 40v8" stroke-width="2"/>
+    </svg>
+    <p class="text-gray-500 font-medium mb-1">검색 결과를 찾지 못했어요</p>
+    <p class="text-sm text-gray-400">다른 검색어로 다시 시도해 보세요</p>
+</div>
 {% else %}
-<div class="space-y-4">
+<!-- Results count -->
+<p class="text-sm text-gray-500 mt-2 mb-3">"<span class="font-medium text-gray-700">{{ q }}</span>" 검색 결과 {{ books|length }}건</p>
+
+<!-- Book cards -->
+<div class="space-y-3">
     {% for book in books %}
-    <div class="bg-white rounded-lg shadow-sm border p-4">
-        <div class="flex gap-4">
+    <div class="bg-white rounded-xl shadow-sm border border-card-border overflow-hidden transition-shadow duration-200 hover:shadow-md animate-fade-in-up" style="animation-delay: {{ loop.index0 * 0.04 }}s; opacity: 0;">
+        <!-- Book info -->
+        <div class="p-4 flex gap-4">
             {% if book.thumbnail %}
-            <img src="{{ book.thumbnail }}" alt="{{ book.title }}" class="w-20 h-28 object-cover rounded flex-shrink-0">
+            <img src="{{ book.thumbnail }}" alt="{{ book.title }}" class="w-24 h-32 object-cover rounded-lg flex-shrink-0 shadow-sm bg-gray-100">
             {% endif %}
-            <div class="flex-1 min-w-0">
-                <h2 class="font-bold text-gray-900 truncate">{{ book.title }}</h2>
-                <p class="text-sm text-gray-600">{{ book.authors | join(', ') }}</p>
-                <p class="text-sm text-gray-500">{{ book.publisher }} · {{ book.pub_date }}</p>
-                <p class="text-sm mt-1">
+            <div class="flex-1 min-w-0 flex flex-col">
+                <h2 class="font-bold text-gray-900 text-base line-clamp-2 leading-snug">{{ book.title }}</h2>
+                <p class="text-sm text-gray-600 mt-1">{{ book.authors | join(', ') }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ book.publisher }} · {{ book.pub_date }}</p>
+                <div class="mt-auto pt-2">
                     {% if book.sale_price > 0 %}
-                    <span class="text-blue-600 font-medium">{{ "{:,}".format(book.sale_price) }}원</span>
-                    <span class="text-gray-400 line-through text-xs ml-1">{{ "{:,}".format(book.price) }}원</span>
-                    {% else %}
-                    <span class="text-blue-600 font-medium">{{ "{:,}".format(book.price) }}원</span>
+                    <span class="text-lg font-bold text-accent">{{ "{:,}".format(book.sale_price) }}원</span>
+                    <span class="text-xs text-gray-300 line-through ml-1.5">{{ "{:,}".format(book.price) }}원</span>
+                    {% set discount = ((book.price - book.sale_price) / book.price * 100) | int %}
+                    {% if discount > 0 %}
+                    <span class="ml-1.5 text-xs font-semibold text-red-500 bg-red-50 rounded-full px-2 py-0.5">{{ discount }}%</span>
                     {% endif %}
-                </p>
-                <button
-                    onclick="loadInventory(this, '{{ book.isbn13 }}')"
-                    class="mt-2 px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
-                >오프라인 재고 확인</button>
-                <div class="inventory-result mt-2 hidden"></div>
+                    {% else %}
+                    <span class="text-lg font-bold text-accent">{{ "{:,}".format(book.price) }}원</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
+        <!-- Inventory button -->
+        <button
+            onclick="toggleInventory(this, '{{ book.isbn13 }}')"
+            class="w-full py-3 border-t border-gray-100 bg-accent-soft hover:bg-accent-light text-accent text-sm font-medium flex items-center justify-center gap-2 btn-press transition-colors"
+            data-loaded="false"
+        >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            <span class="btn-text">오프라인 재고 확인</span>
+            <svg class="chevron w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+            </svg>
+        </button>
+        <!-- Inventory panel -->
+        <div class="inventory-panel bg-gray-50/50"></div>
     </div>
     {% endfor %}
 </div>
@@ -59,64 +104,129 @@
 
 {% block scripts %}
 <script>
-async function loadInventory(btn, isbn13) {
-    const container = btn.nextElementSibling;
+async function toggleInventory(btn, isbn13) {
+    const card = btn.closest('.bg-white');
+    const panel = card.querySelector('.inventory-panel');
+    const chevron = btn.querySelector('.chevron');
+    const btnText = btn.querySelector('.btn-text');
+
+    // If already loaded, just toggle
+    if (btn.dataset.loaded === 'true') {
+        panel.classList.toggle('open');
+        chevron.classList.toggle('rotate');
+        return;
+    }
+
+    // Show loading state
+    panel.classList.add('open');
+    chevron.classList.add('rotate');
     btn.disabled = true;
-    btn.textContent = '조회 중...';
-    btn.classList.add('opacity-50');
-    container.classList.remove('hidden');
-    container.innerHTML = '<p class="text-sm text-gray-500">서점 재고를 확인하고 있습니다...</p>';
+    btnText.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-accent/30 border-t-accent rounded-full animate-spinner mr-1.5 align-middle"></span>조회 중';
+    panel.innerHTML = renderSkeleton();
 
     try {
         const resp = await fetch(`/api/inventory/${isbn13}`);
         const data = await resp.json();
-        container.innerHTML = renderInventory(data);
+        panel.innerHTML = renderInventory(data);
+        btn.dataset.loaded = 'true';
     } catch (e) {
-        container.innerHTML = '<p class="text-sm text-red-500">재고 조회에 실패했습니다.</p>';
+        panel.innerHTML = renderError(isbn13);
     } finally {
         btn.disabled = false;
-        btn.textContent = '오프라인 재고 확인';
-        btn.classList.remove('opacity-50');
+        btnText.textContent = '오프라인 재고 확인';
     }
+}
+
+function renderSkeleton() {
+    return `
+        <div class="p-4 space-y-3">
+            <div class="skeleton h-4 rounded-full w-32"></div>
+            <div class="skeleton h-3 rounded-full w-full"></div>
+            <div class="skeleton h-3 rounded-full w-3/4"></div>
+            <div class="skeleton h-3 rounded-full w-5/6"></div>
+        </div>`;
+}
+
+function renderError(isbn13) {
+    return `
+        <div class="p-4 text-center">
+            <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
+            </svg>
+            <p class="text-sm text-gray-500 mb-2">재고 조회에 실패했습니다</p>
+            <button onclick="retryInventory(this, '${isbn13}')" class="text-sm text-accent font-medium hover:underline">다시 시도</button>
+        </div>`;
+}
+
+function retryInventory(retryBtn, isbn13) {
+    const card = retryBtn.closest('.bg-white');
+    const mainBtn = card.querySelector('[data-loaded]');
+    mainBtn.dataset.loaded = 'false';
+    toggleInventory(mainBtn, isbn13);
 }
 
 function renderInventory(data) {
     if (!data.results || data.results.length === 0) {
-        return '<p class="text-sm text-gray-500">조회 결과가 없습니다.</p>';
+        return '<div class="p-4 text-center text-sm text-gray-400">조회 결과가 없습니다</div>';
     }
 
-    let html = `<p class="text-sm font-medium text-gray-700 mb-2">총 ${data.total_stores_with_stock}개 매장 보유</p>`;
+    const total = data.total_stores_with_stock;
+    const summaryColor = total > 0
+        ? 'bg-success-light text-green-800'
+        : 'bg-gray-100 text-gray-500';
+    const summaryText = total > 0
+        ? `재고 있음 · ${total}개 매장`
+        : '재고 없음';
+
+    let html = `<div class="p-4">`;
+    html += `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${summaryColor}">`;
+    if (total > 0) {
+        html += `<span class="w-1.5 h-1.5 rounded-full bg-success"></span>`;
+    }
+    html += `${summaryText}</span>`;
 
     for (const result of data.results) {
-        const statusBadge = result.status === 'success'
-            ? `<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">${result.stores.length}개 매장</span>`
+        // Provider label
+        const statusLabel = result.status === 'success'
+            ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-600 font-medium">${result.stores.length}개</span>`
             : result.status === 'timeout'
-            ? '<span class="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">타임아웃</span>'
-            : '<span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">미구현</span>';
+            ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-yellow-50 text-yellow-600 font-medium">타임아웃</span>`
+            : `<span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-50 text-gray-400 font-medium">미구현</span>`;
 
-        html += `<details class="mb-1">`;
-        html += `<summary class="text-sm cursor-pointer hover:text-blue-600 flex items-center gap-2">`;
-        html += `<span class="font-medium">${result.display_name}</span> ${statusBadge}`;
-        html += `</summary>`;
+        html += `<div class="mt-3">`;
+        html += `<div class="flex items-center gap-2 mb-1.5">`;
+        html += `<span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">${result.display_name}</span>`;
+        html += statusLabel;
+        html += `</div>`;
 
         if (result.status === 'success' && result.stores.length > 0) {
-            html += '<ul class="ml-4 mt-1 space-y-0.5">';
+            html += '<div class="space-y-0">';
             for (const store of result.stores) {
-                html += `<li class="text-sm text-gray-600">`;
-                html += `<span class="inline-block w-2 h-2 rounded-full ${store.has_stock ? 'bg-green-500' : 'bg-red-400'} mr-1"></span>`;
-                html += store.store_name;
-                if (store.quantity) html += ` (${store.quantity}권)`;
-                if (store.location) html += ` <span class="text-xs text-gray-400">${store.location}</span>`;
-                html += '</li>';
+                const barColor = store.has_stock ? 'bg-success' : 'bg-gray-200';
+                html += `<div class="flex items-center py-2 border-b border-gray-100 last:border-0">`;
+                html += `<div class="w-1 h-7 rounded-full ${barColor} mr-3 flex-shrink-0"></div>`;
+                html += `<div class="flex-1 min-w-0">`;
+                html += `<span class="text-sm font-medium text-gray-800">${store.store_name}</span>`;
+                if (store.location) {
+                    html += `<p class="text-xs text-gray-400 truncate">${store.location}</p>`;
+                }
+                html += `</div>`;
+                if (store.quantity) {
+                    html += `<span class="text-xs font-medium bg-green-50 text-green-700 rounded-full px-2 py-0.5 ml-2 flex-shrink-0">${store.quantity}권</span>`;
+                }
+                html += `</div>`;
             }
-            html += '</ul>';
+            html += '</div>';
+        } else if (result.status === 'success' && result.stores.length === 0) {
+            html += `<p class="text-xs text-gray-400 py-1">재고 보유 매장 없음</p>`;
         } else if (result.error_message) {
-            html += `<p class="ml-4 text-xs text-gray-400 mt-1">${result.error_message}</p>`;
+            html += `<p class="text-xs text-gray-400 py-1">${result.error_message}</p>`;
         }
 
-        html += '</details>';
+        html += '</div>';
     }
 
+    html += '</div>';
     return html;
 }
 </script>
